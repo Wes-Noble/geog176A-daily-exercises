@@ -29,7 +29,7 @@ covid_region %>%
   facet_grid(name~region, scales = "free_y") +
   theme_update() +
   theme(legend.position = "none") +
-  ggsave(file = "/users/noblex/github/geog176A-daily-exercises/imgs/exercise7-q1.png")
+  ggsave(file = "/users/noblex/github/geog176A-daily-exercises/imgs/Noble_exercise7-q1.png")
 
 
 
