@@ -1,0 +1,52 @@
+---
+title: "Daily Exercise 13"
+author: "Wesley Noble"
+output: html_document
+---
+
+```{r messages = FALSE}
+
+library(tidyverse)
+library(sf)
+library(rmapshaper)
+
+```
+
+# Raw US States data, map, & point count
+
+```{r messages = FALSE}
+us_states = USAboundaries::us_states() %>%
+  filter(!stusps %in% c("PR", "HI", "AK")) %>% 
+  st_union() %>% 
+  st_transform(5070)
+
+plot(us_states)
+
+mapview::npts(us_states)
+
+```
+
+# st_simplify method w/ data, map, point count
+
+```{r messages = FALSE}
+
+us_st90000  = st_simplify(us_states, dTolerance = 90000)
+
+plot(us_st90000)
+
+mapview::npts(us_st90000)
+
+```
+
+# ms_simplify method w/ data, map, point count
+
+```{r messages = FALSE}
+
+us_ms1  = ms_simplify(us_states, keep = .01)
+
+plot(us_ms1)
+
+mapview::npts(us_ms1)
+
+```
+
