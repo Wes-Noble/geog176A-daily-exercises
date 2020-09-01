@@ -1,0 +1,71 @@
+---
+title: "Daily Exercise 17"
+author: "Wesley Noble"
+output: html_document
+---
+
+```{r, message = FALSE, warning = FALSE}
+
+library(tidyverse)
+library(sf)
+library(rmapshaper)
+library(mapview)
+library(units)
+library(readxl)
+library(viridis)
+library(gghighlight)
+library(leaflet)
+library(leafpop)
+
+
+us_counties = USAboundaries::us_counties()
+
+
+get_conus = function(data, var){
+    filter(data, !get(var) %in%
+             c("Hawaii", "Puerto Rico", "Alaska",
+               "Guam", "District of Columbia"))
+}
+
+conus_counties = get_conus(us_counties, "name") %>%
+  st_transform(5070)
+
+counties = st_transform(us_counties, 5070) %>%
+  select(name, geoid, state_name) %>%
+  get_conus("state_name")
+
+counties_union = counties %>%
+  st_union()
+
+
+tmp = read_excel("/users/noblex/github/geog-176A-labs/data/NID2019_U.xlsx")
+NID2019_U = tmp %>%
+  filter(!is.na(LONGITUDE), !is.na(LATITUDE)) %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326) %>%
+  st_transform(5070) %>%
+  st_filter(counties_union)
+
+
+miss = read_sf('/users/noblex/github/geog-176A-labs/data/MajorRivers.shp') %>%
+  filter(SYSTEM == "Mississippi") %>%
+  st_transform(4326)
+
+#filter to largest and most high risk dam in each state
+
+biggest_riskyest_dams = NID2019_U %>%
+  filter(HAZARD == "H", grepl("C", PURPOSES)) %>%
+  group_by(STATE) %>%
+  slice_max(NID_STORAGE) %>%
+  select("DAM_NAME", "NID_STORAGE", "YEAR_COMPLETED", "PURPOSES") %>%
+  st_transform(4326)
+
+#Make Leaflet
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB) %>%
+  addPolylines(data = miss) %>%
+  addCircleMarkers(data = biggest_riskyest_dams, fillOpacity = .5, radius = ~NID_STORAGE/1500000, color = "red", stroke = FALSE,
+                   popup = popupTable(st_drop_geometry(biggest_riskyest_dams), feature.id = FALSE, row.number = FALSE))
+
+```
+
