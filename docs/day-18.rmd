@@ -31,4 +31,26 @@ plot(elev)
 
 
 ```
+#Part 2
+
+```{r, message=FALSE, warning=FALSE}
+
+threshold = function(x) {ifelse(x <= 0 , NA, 1)}
+
+(mask = calc(elev, threshold))
+
+land_cells = mask * elev
+
+(reclass_list = data.frame(min = seq(0,500,100),max =  seq(100,600, 100), lab = c(0:5)))
+
+(reclass = reclassify(land_cells, reclass_list, lowerTRUE = TRUE))
+
+(s = stack(elev, mask, land_cells, reclass) %>% 
+  setNames(c("elevation", "land-mask", "terrain", "topography")))
+
+plot(s, col = viridis::viridis(256))
+
+
+
+```
 
