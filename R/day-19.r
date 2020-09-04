@@ -1,0 +1,71 @@
+---
+  title: "Daily Exercise 19"
+author: "Wesley Noble"
+output: html_document
+---
+
+library(tidyverse)
+library(elevatr)
+library(sf)
+library(rgdal)
+library(raster)
+library(osmdata)
+library(units)
+library(leaflet)
+library(leafpop)
+
+
+goleta_box = read_csv("/users/noblex/github/geog-176A-labs/data/uscities.csv") %>%
+  st_as_sf(coords = c("lng", "lat"), crs = 4326) %>%
+  filter(city == "Goleta") %>%
+  st_transform(5070) %>%
+  st_buffer(5000) %>%
+  st_bbox() %>%
+  st_as_sfc() %>%
+  st_as_sf()
+
+elev = elevatr::get_elev_raster(goleta_box, z = 11) %>% crop(goleta_box)
+writeRaster(elev, filename = "/users/noblex/github/geog176A-daily-exercises/data/goleta-elev.tif", overwrite = TRUE)
+
+(elev = raster("../data/goleta-elev.tif"))
+
+plot(elev)
+
+# Part 2
+
+threshold = function(x) {ifelse(x <= 0 , NA, 1)}
+
+(mask = calc(elev, threshold))
+
+land_cells = mask * elev
+
+(reclass_list = data.frame(min = seq(0,500,100),max =  seq(100,600, 100), lab = c(0:5)))
+
+(reclass = reclassify(land_cells, reclass_list, lowerTRUE = TRUE))
+
+(s = stack(elev, mask, land_cells, reclass) %>%
+    setNames(c("elevation", "land-mask", "terrain", "topography")))
+
+plot(s, col = viridis::viridis(256))
+
+
+
+# Part 3
+
+
+(bb  = st_bbox(s) %>% st_as_sfc() %>% st_transform(4326))
+
+osm = osmdata::opq(bb) %>%
+  add_osm_feature(key = 'amenity', value = "restaurant") %>%
+  osmdata_sf()
+
+(restaurants = osm$osm_points %>%
+    filter(!is.na(name)) %>%
+    mutate(elev_extract = extract(elev, restaurants)))
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB) %>%
+  addMarkers(data = restaurants, popup = ~elev_extract, label = ~name)
+
+
+
